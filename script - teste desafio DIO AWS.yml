@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "ECS Cluster com uma instância e Security Group"
+
+Resources:
+  # Security Group para controlar acesso
+  MySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Permite acesso HTTP e SSH"
+      VpcId: vpc-13545186
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 203.0.113.0/24 
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0 
+
+  # Cluster ECS
+  MyECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: "MeuClusterECS"
+
+  # Instância ECS (EC2)
+  MyECSInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t3.micro
+      ImageId: ami-0abcdef1234567890
+      IamInstanceProfile: !Ref ECSInstanceProfile
+      SecurityGroupIds:
+        - !Ref MySecurityGroup
+      SubnetId: subnet-51325648
+      Tags:
+        - Key: Name
+          Value: "ECS-Instance"
+
+  # Role para a instância ECS
+  ECSInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
+
+  # Instance Profile que associa a role à instância
+  ECSInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref ECSInstanceRole
+
+Outputs:
+  ClusterName:
+    Description: "Teste Desafio DIO AWS"
+    Value: !Ref MyECSCluster
+
+  InstancePublicIP:
+    Description: "Endereço IP público da instância ECS"
+    Value: !GetAtt MyECSInstance.PublicIp
